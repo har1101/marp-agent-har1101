@@ -69,20 +69,20 @@ Phase 2: Amplifyデプロイ
 | ランタイム | Bedrock AgentCore | エージェント実行基盤 |
 | ストレージ | S3 | スライド・PDF保存 |
 
-## CDK Hotswap & Amplify 対応状況（2025/1/24時点）
+## CDK Hotswap & Amplify 対応状況（2026/1/24更新）
 
 ### 背景
 k.gotoさんにより、CDK hotswapがAgentCore Runtimeに対応した。
 - 参考: https://go-to-k.hatenablog.com/entry/cdk-hotswap-bedrock-agentcore-runtime
+- サンプル: https://github.com/go-to-k/amplify-agentcore-cdk
 
-### 現状の制約
+### 対応状況
 
 | 項目 | 状況 |
 |------|------|
 | CDK hotswap | AgentCore Runtime対応済み（v1.14.0〜） |
-| Amplify toolkit-lib | まだ対応バージョン（1.14.0）に未更新 → **Amplify側のアップデート待ち** |
-| ECRソースのバグ | AWS SDK（smithy/core）のリグレッション → **近々自動修正される見込み** |
-| Amplify Console | Docker build未サポート |
+| Amplify toolkit-lib | overridesで先行対応可能 |
+| Amplify Console | **カスタムビルドイメージでDocker build可能** |
 
 ### 採用方針
 
@@ -91,21 +91,30 @@ k.gotoさんにより、CDK hotswapがAgentCore Runtimeに対応した。
 │  開発環境（sandbox）                                          │
 │  ・AgentRuntimeArtifact.fromAsset でローカルARM64ビルド       │
 │  ・deploy-time-build は使わない（macでARMビルド可能なため）     │
-│  ・Amplifyのhotswap対応後は高速デプロイが可能に                │
+│  ・overridesでhotswap先行利用可能                             │
 ├─────────────────────────────────────────────────────────────┤
 │  本番環境（Amplify Console）                                   │
-│  ・Docker build未サポートのため工夫が必要                      │
-│  ・選択肢:                                                     │
-│    1. GitHub ActionsでECRプッシュ → CDKでECR参照               │
-│    2. sandboxとmainでビルド方法を分岐                         │
-│    3. Amplify ConsoleのDocker対応を待つ                       │
+│  ・カスタムビルドイメージを設定してDocker build有効化          │
+│  ・イメージ: public.ecr.aws/codebuild/amazonlinux-x86_64-standard:5.0 │
+│  ・fromAsset()をそのまま使用可能                              │
 └─────────────────────────────────────────────────────────────┘
 ```
 
-### 今後の対応
-1. まずはsandbox環境で `fromAsset` を使って開発
-2. Amplify/CDKのアップデートを追跡
-3. 本番デプロイ方法は後で決定（GitHub Actions or 分岐ロジック）
+### package.json overrides設定
+
+```json
+{
+  "overrides": {
+    "@aws-cdk/toolkit-lib": "1.14.0",
+    "@smithy/core": "^3.21.0"
+  }
+}
+```
+
+| パッケージ | バージョン | 理由 |
+|-----------|-----------|------|
+| `@aws-cdk/toolkit-lib` | `1.14.0` | AgentCore Hotswap対応版 |
+| `@smithy/core` | `^3.21.0` | AWS SDKのリグレッションバグ対応 |
 
 ## 進捗状況
 
@@ -116,6 +125,18 @@ k.gotoさんにより、CDK hotswapがAgentCore Runtimeに対応した。
 | Step 3 | ✅完了 | インフラ構築（AgentCore Runtime CDK） |
 | Step 4 | ✅完了 | フロントエンド実装（チャットUI、プレビュー、SSE対応） |
 | Step 5 | ✅完了 | 統合・テスト（E2Eテスト全件PASS） |
+| Step 6 | 🔄進行中 | 本番デプロイ（Amplify Console） |
+
+### Step 6 詳細進捗
+
+| 項目 | 状態 | 備考 |
+|------|------|------|
+| package.json overrides追加 | ⬜未着手 | toolkit-lib 1.14.0 |
+| Amplify Console設定 | ⬜未着手 | カスタムビルドイメージ設定 |
+| GitHubリポジトリ連携 | ⬜未着手 | mainブランチ連携 |
+| 環境変数設定 | ⬜未着手 | TAVILY_API_KEY等 |
+| 本番デプロイ実行 | ⬜未着手 | |
+| 本番動作確認 | ⬜未着手 | E2Eテスト |
 
 ### Step 5 詳細進捗
 

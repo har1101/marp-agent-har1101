@@ -339,14 +339,51 @@ data: [DONE]
 | 選択肢 | フロントエンドのみ / バックエンドでセッション管理 |
 | MVP方針 | フロントエンドで state 管理（リロードで消える） |
 
-### 7.5 本番デプロイ（重要度: 低）
+### 7.5 本番デプロイ（解決済み）
 
 | 項目 | 内容 |
 |------|------|
-| 問題 | Amplify Console で Docker build 未サポート |
-| 影響 | sandbox と本番でビルド方法が異なる |
-| 対策案 | GitHub Actions で ECR プッシュ、または対応待ち |
-| MVP方針 | 後で考える。まずローカル開発に集中 |
+| 問題 | Amplify Console のデフォルトビルドイメージに Docker がない |
+| 解決策 | カスタムビルドイメージを設定 |
+| ビルドイメージ | `public.ecr.aws/codebuild/amazonlinux-x86_64-standard:5.0` |
+| 方式 | `fromAsset()` をそのまま使用可能 |
+
+---
+
+## 7.6 本番デプロイ手順
+
+### 1. package.json overrides追加
+
+```json
+{
+  "overrides": {
+    "@aws-cdk/toolkit-lib": "1.14.0",
+    "@smithy/core": "^3.21.0"
+  }
+}
+```
+
+### 2. Amplify Console設定
+
+1. Amplify Console → 対象アプリを作成
+2. **Hosting** → **Build settings** → **Build image settings** → **Edit**
+3. **Build image** → **Custom Build Image** を選択
+4. イメージ名: `public.ecr.aws/codebuild/amazonlinux-x86_64-standard:5.0`
+5. **Save**
+
+### 3. 環境変数設定
+
+Amplify Console → **Environment variables** で設定:
+
+| 変数名 | 説明 |
+|--------|------|
+| `TAVILY_API_KEY` | Web検索API用 |
+
+### 4. ブランチ連携
+
+- GitHubリポジトリを連携
+- `main` ブランチをデプロイ対象に設定
+- 自動ビルド有効化
 
 ---
 
