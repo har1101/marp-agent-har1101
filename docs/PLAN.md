@@ -113,7 +113,7 @@ k.gotoさんにより、CDK hotswapがAgentCore Runtimeに対応した。
 |---------|------|------|
 | Step 1 | ✅完了 | プロジェクト初期化（Amplify Gen2 + Vite + Tailwind） |
 | Step 2 | ✅完了 | エージェント実装（Strands Agent + Marp CLI） |
-| Step 3 | 🔄進行中 | インフラ構築（AgentCore Runtime CDK） |
+| Step 3 | ✅完了 | インフラ構築（AgentCore Runtime CDK） |
 | Step 4 | ⏳未着手 | フロントエンド実装 |
 | Step 5 | ⏳未着手 | 統合・テスト |
 
@@ -154,15 +154,15 @@ marp-agent/
 │   └── KNOWLEDGE.md
 ├── amplify/
 │   ├── auth/
-│   │   └── resource.ts          # Cognito認証設定
+│   │   └── resource.ts          # Cognito認証設定 ✅
 │   ├── agent/
-│   │   ├── resource.ts          # AgentCore CDK定義（作成予定）
+│   │   ├── resource.ts          # AgentCore CDK定義 ✅
 │   │   └── runtime/
 │   │       ├── Dockerfile       # エージェントコンテナ ✅
 │   │       ├── requirements.txt # Python依存関係 ✅
 │   │       ├── pyproject.toml   # uv管理用 ✅
 │   │       └── agent.py         # Strands Agent実装 ✅
-│   └── backend.ts               # バックエンド統合
+│   └── backend.ts               # バックエンド統合 ✅
 ├── tests/
 │   └── test_agent.py            # エージェント単体テスト ✅
 ├── src/

@@ -129,7 +129,7 @@ npm install @aws-cdk/aws-bedrock-agentcore-alpha
 import * as agentcore from '@aws-cdk/aws-bedrock-agentcore-alpha';
 import * as path from 'path';
 
-// ローカルDockerイメージからビルド
+// ローカルDockerイメージからビルド（ARM64必須）
 const artifact = agentcore.AgentRuntimeArtifact.fromAsset(
   path.join(__dirname, 'agent/runtime')
 );
@@ -138,7 +138,27 @@ const runtime = new agentcore.Runtime(stack, 'MarpAgent', {
   runtimeName: 'marp-agent',
   agentRuntimeArtifact: artifact,
 });
+
+// エンドポイント作成（必須）
+const endpoint = runtime.addEndpoint('marp-agent-endpoint');
 ```
+
+### Runtimeクラスのプロパティ
+| プロパティ | 説明 |
+|-----------|------|
+| `agentRuntimeArn` | Runtime ARN |
+| `agentRuntimeId` | Runtime ID |
+| `agentRuntimeName` | Runtime名 |
+| `role` | IAMロール |
+
+※ `runtimeArn` や `invokeUrl` は存在しない（alpha版の注意点）
+
+### RuntimeEndpointクラスのプロパティ
+| プロパティ | 説明 |
+|-----------|------|
+| `agentRuntimeEndpointArn` | Endpoint ARN |
+| `endpointName` | Endpoint名 |
+| `agentRuntimeArn` | 親RuntimeのARN |
 
 ### Cognito認証統合
 ```typescript
@@ -146,6 +166,17 @@ authorizerConfiguration: agentcore.RuntimeAuthorizerConfiguration.usingCognito(
   userPool,
   [userPoolClient]
 )
+```
+
+### Bedrockモデル権限付与
+```typescript
+runtime.addToRolePolicy(new iam.PolicyStatement({
+  actions: [
+    'bedrock:InvokeModel',
+    'bedrock:InvokeModelWithResponseStream',
+  ],
+  resources: ['arn:aws:bedrock:*::foundation-model/*'],  // 全モデル
+}));
 ```
 
 ### Amplify Gen2との統合
