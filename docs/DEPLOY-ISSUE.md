@@ -6,113 +6,101 @@ Amplify Console での本番デプロイが失敗している。
 
 ## 根本原因
 
-**アーキテクチャの不整合**
+**アーキテクチャの制約**
 
-| 環境 | アーキテクチャ | 状態 |
+| 環境 | アーキテクチャ | 備考 |
 |------|---------------|------|
-| AgentCore Runtime | ARM64 のみ対応 | 制約 |
-| Amplify Console ビルド環境 | x86_64 | 制約 |
+| AgentCore Runtime | ARM64 のみ | AWS側の制約 |
+| Amplify Console ビルド環境 | x86_64 のみ | カスタムイメージもx86_64のみ |
 | Dockerfile | `--platform=linux/arm64` | ARM64 指定 |
 
-→ x86_64 環境で ARM64 イメージをネイティブビルドできない
+→ Amplify Console では ARM64 イメージをビルドできない
 
 ## 発生したエラーの経緯
 
-### 1. CDKAssetPublishError（最初のエラー）
+### 1. CDKAssetPublishError
 ```
 [CDKAssetPublishError] CDK failed to publish assets
 ```
 - **原因**: デフォルトビルドイメージに Docker が含まれていない
-- **対応**: カスタムビルドイメージを設定 → 解決
+- **対応**: カスタムビルドイメージ `amazonlinux-x86_64-standard:5.0` を設定
+- **結果**: ✅ Docker は使えるようになった
 
 ### 2. Docker daemon not running
 ```
 ERROR: Cannot connect to the Docker daemon at unix:///var/run/docker.sock
 ```
 - **原因**: Docker デーモンが起動していない
-- **対応**: `amplify.yml` で Docker デーモンを起動 → 解決
+- **対応**: `amplify.yml` で Docker デーモンを起動する設定を追加
+- **結果**: ✅ Docker デーモンが起動するようになった
 
-### 3. apt-get exit code 255（現在のエラー）
+### 3. apt-get exit code 255
 ```
-ERROR: failed to solve: process "/bin/sh -c apt-get update..." did not complete successfully: exit code: 255
+ERROR: failed to solve: process "/bin/sh -c apt-get update..." exit code: 255
 ```
-- **原因**: x86_64 環境で ARM64 イメージをビルドしようとしている
-- **対応**: 検討中
+- **原因**: x86_64 環境で ARM64 イメージ（`--platform=linux/arm64`）をビルドしようとした
+- **対応**: ARM64 ビルドイメージ `amazonlinux-aarch64-standard:3.0` に変更を試行
+- **結果**: ❌ 次のエラーへ
 
-## 解決策の選択肢
-
-### A. ECR 事前プッシュ方式（推奨）
-
-ローカル（Mac ARM64）でビルドして ECR にプッシュし、CDK で参照する。
-
-**手順**:
-1. ECR リポジトリを作成
-2. ローカルで ARM64 イメージをビルド
-3. ECR にプッシュ
-4. CDK を `fromAsset()` → `fromEcrRepository()` に変更
-5. Amplify Console でビルド（Docker 不要になる）
-
-**メリット**:
-- 確実に ARM64 イメージを使用できる
-- ビルド時間短縮
-
-**デメリット**:
-- エージェントコード変更時に手動で ECR プッシュが必要
-- CI/CD パイプラインの追加構築が必要
-
-### B. Docker buildx（QEMU エミュレーション）
-
-x86_64 環境から ARM64 イメージをクロスビルドする。
-
-**手順**:
-1. `amplify.yml` で QEMU と buildx をセットアップ
-2. `docker buildx build --platform linux/arm64` でビルド
-
-**メリット**:
-- 既存の `fromAsset()` を維持できる
-- ワークフロー変更が少ない
-
-**デメリット**:
-- ビルドが遅い（エミュレーション）
-- QEMU セットアップが複雑
-
-### C. GitHub Actions + ECR
-
-GitHub Actions の ARM64 ランナーでビルドして ECR にプッシュ。
-
-**メリット**:
-- ネイティブ ARM64 ビルド
-- 自動化可能
-
-**デメリット**:
-- 追加の CI/CD 設定が必要
-- GitHub Actions の設定コスト
-
-## 採用する解決策
-
-**ARM64 ビルドイメージを使用**
-
-Amplify Console のカスタムビルドイメージを ARM64 対応のものに変更する。
-
+### 4. SINGLE_BUILD_CONTAINER_DEAD（現在）
 ```
-public.ecr.aws/codebuild/amazonlinux-aarch64-standard:3.0
+Build container found dead before completing the build.
+Build container died because it was out of memory, or the Docker image is not supported
 ```
+- **原因**: Amplify Console は ARM64 カスタムビルドイメージをサポートしていない
+- **対応**: ECR 事前プッシュ方式に切り替え
+
+## 結論
+
+**Amplify Console では ARM64 Docker イメージをビルドできない**
 
 理由:
-1. AgentCore Runtime が ARM64 専用なので、ビルド環境も ARM64 に統一
-2. 既存の `fromAsset()` をそのまま使用可能
-3. 追加のインフラ（ECR等）が不要
+- Amplify Console のビルド環境は x86_64 のみ
+- カスタムビルドイメージも x86_64 のみサポート
+- ARM64 イメージ（`amazonlinux-aarch64-standard:3.0`）を指定するとコンテナが死ぬ
 
-## 実施した変更
+## 解決策: ECR 事前プッシュ方式
 
-1. ✅ Dockerfile に `--platform=linux/arm64` を追加
-2. ✅ PLAN.md のビルドイメージ記載を ARM64 に修正
-3. 🔄 Amplify Console でカスタムビルドイメージを変更（手動）
+ローカル（Mac ARM64）で Docker イメージをビルドして ECR にプッシュし、CDK で参照する。
 
-## 次のアクション
+```
+┌─────────────────┐     ┌─────────────────┐     ┌─────────────────┐
+│  ローカル Mac    │────▶│      ECR        │────▶│  Amplify Console │
+│  (ARM64 ビルド)  │push │  (イメージ保存)  │参照 │  (Docker不要)    │
+└─────────────────┘     └─────────────────┘     └─────────────────┘
+```
 
-1. Amplify Console → Build settings → Build image settings → Edit
-2. Build image → Custom Build Image
-3. イメージ名: `public.ecr.aws/codebuild/amazonlinux-aarch64-standard:3.0`
-4. Save
-5. 変更をコミット・プッシュして再デプロイ
+### 手順
+
+1. ✅ ECR リポジトリ作成済み
+   ```
+   715841358122.dkr.ecr.us-east-1.amazonaws.com/marp-agent
+   ```
+
+2. ✅ ECR ログイン済み
+
+3. ⬜ ローカルで Docker イメージをビルド
+   ```bash
+   cd amplify/agent/runtime
+   docker build -t marp-agent .
+   ```
+
+4. ⬜ ECR にプッシュ
+   ```bash
+   docker tag marp-agent:latest 715841358122.dkr.ecr.us-east-1.amazonaws.com/marp-agent:latest
+   docker push 715841358122.dkr.ecr.us-east-1.amazonaws.com/marp-agent:latest
+   ```
+
+5. ⬜ `amplify/agent/resource.ts` を修正
+   - `fromAsset()` → `fromEcrRepository()` に変更
+
+6. ⬜ `amplify.yml` から Docker 起動設定を削除（不要になる）
+
+7. ⬜ Amplify Console のビルドイメージをデフォルトに戻す
+
+8. ⬜ コミット・プッシュして再デプロイ
+
+### 運用上の注意
+
+- エージェントコード（agent.py）を変更した場合、手動で ECR に再プッシュが必要
+- 将来的には GitHub Actions で自動化を検討
