@@ -95,7 +95,8 @@ k.gotoさんにより、CDK hotswapがAgentCore Runtimeに対応した。
 ├─────────────────────────────────────────────────────────────┤
 │  本番環境（Amplify Console）                                   │
 │  ・カスタムビルドイメージを設定してDocker build有効化          │
-│  ・イメージ: public.ecr.aws/codebuild/amazonlinux-x86_64-standard:5.0 │
+│  ・イメージ: public.ecr.aws/codebuild/amazonlinux-aarch64-standard:3.0 │
+│  ・AgentCore RuntimeはARM64のみ対応のため、ARM64ビルド環境必須  │
 │  ・fromAsset()をそのまま使用可能                              │
 └─────────────────────────────────────────────────────────────┘
 ```
