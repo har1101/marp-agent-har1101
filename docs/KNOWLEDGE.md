@@ -281,9 +281,67 @@ export default defineConfig({
 
 ---
 
+## Marp Core（フロントエンド用）
+
+### インストール
+```bash
+npm install @marp-team/marp-core
+```
+
+### ブラウザでのレンダリング
+```typescript
+import Marp from '@marp-team/marp-core';
+
+const marp = new Marp();
+const { html, css } = marp.render(markdown);
+
+// HTMLからスライドを抽出
+const parser = new DOMParser();
+const doc = parser.parseFromString(html, 'text/html');
+const sections = doc.querySelectorAll('section');
+```
+
+### スライドプレビュー表示
+- 各スライドは `<section>` タグで区切られる
+- CSSも一緒に適用する必要あり
+- サムネイル表示には `transform: scale(0.5)` などでスケールダウン
+
+---
+
+## フロントエンド構成
+
+### コンポーネント構成
+```
+src/
+├── App.tsx              # メイン（タブ切り替え、状態管理）
+├── components/
+│   ├── Chat.tsx         # チャットUI（ストリーミング対応）
+│   └── SlidePreview.tsx # スライドプレビュー
+└── hooks/               # カスタムフック（今後追加）
+```
+
+### 状態管理
+- `markdown`: 生成されたMarpマークダウン
+- `activeTab`: 現在のタブ（chat / preview）
+- `isDownloading`: PDF生成中フラグ
+
+### ストリーミングUI実装パターン
+```typescript
+// メッセージを逐次更新
+setMessages(prev => {
+  const newMessages = [...prev];
+  const lastMessage = newMessages[newMessages.length - 1];
+  lastMessage.content += chunk;
+  return newMessages;
+});
+```
+
+---
+
 ## 参考リンク
 
 - [Marp公式](https://marp.app/)
+- [Marp Core](https://github.com/marp-team/marp-core)
 - [Strands Agents](https://strandsagents.com/)
 - [Amplify Gen2](https://docs.amplify.aws/gen2/)
 - [AgentCore CDK](https://docs.aws.amazon.com/cdk/api/v2/docs/aws-bedrock-agentcore-alpha-readme.html)

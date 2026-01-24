@@ -114,7 +114,7 @@ k.gotoさんにより、CDK hotswapがAgentCore Runtimeに対応した。
 | Step 1 | ✅完了 | プロジェクト初期化（Amplify Gen2 + Vite + Tailwind） |
 | Step 2 | ✅完了 | エージェント実装（Strands Agent + Marp CLI） |
 | Step 3 | ✅完了 | インフラ構築（AgentCore Runtime CDK） |
-| Step 4 | ⏳未着手 | フロントエンド実装 |
+| Step 4 | 🔄進行中 | フロントエンド実装（UI完了、テスト作成中） |
 | Step 5 | ⏳未着手 | 統合・テスト |
 
 ## 機能一覧
@@ -167,6 +167,10 @@ marp-agent/
 │   └── test_agent.py            # エージェント単体テスト ✅
 ├── src/
 │   ├── App.tsx                  # メインアプリ ✅
+│   ├── components/
+│   │   ├── Chat.tsx             # チャットUI ✅
+│   │   └── SlidePreview.tsx     # スライドプレビュー ✅
+│   ├── hooks/                   # カスタムフック（今後追加）
 │   ├── index.css                # Tailwind + カスタムカラー ✅
 │   └── main.tsx
 ├── index.html                   # HTMLテンプレート ✅
