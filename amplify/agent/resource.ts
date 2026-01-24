@@ -1,13 +1,8 @@
-import * as path from 'path';
-import * as url from 'url';
 import * as cdk from 'aws-cdk-lib';
 import * as iam from 'aws-cdk-lib/aws-iam';
+import * as ecr from 'aws-cdk-lib/aws-ecr';
 import * as agentcore from '@aws-cdk/aws-bedrock-agentcore-alpha';
 import type { IUserPool, IUserPoolClient } from 'aws-cdk-lib/aws-cognito';
-
-// ESモジュールで__dirnameを取得
-const __filename = url.fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
 
 interface MarpAgentProps {
   stack: cdk.Stack;
@@ -17,9 +12,15 @@ interface MarpAgentProps {
 }
 
 export function createMarpAgent({ stack, userPool, userPoolClient, nameSuffix }: MarpAgentProps) {
-  // ローカルDockerイメージからビルド（ARM64）
-  const agentRuntimeArtifact = agentcore.AgentRuntimeArtifact.fromAsset(
-    path.join(__dirname, 'runtime')
+  // ECR リポジトリからイメージを参照（ARM64）
+  const ecrRepository = ecr.Repository.fromRepositoryName(
+    stack,
+    'MarpAgentEcrRepository',
+    'marp-agent'
+  );
+  const agentRuntimeArtifact = agentcore.AgentRuntimeArtifact.fromEcrRepository(
+    ecrRepository,
+    'latest'
   );
 
   // 認証設定（JWT認証）
